@@ -16,10 +16,10 @@
 (driver/register! :databricks-sql, :parent :sql-jdbc)
 
 (defmethod sql-jdbc.conn/connection-details->spec :databricks-sql
-  [_ {:keys [host http-path token db]}]
+  [_ {:keys [host http-path token]}]
   {:classname        "com.databricks.client.jdbc.Driver"
    :subprotocol      "databricks"
-   :subname          (str "//" host ":443/" db)
+   :subname          (str "//" host ":443/")
    :transportMode    "http"
    :ssl              1
    :AuthMech         3
@@ -65,7 +65,7 @@
   {:tables
    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
      (set
-      (for [{:keys [database tablename], table-namespace :namespace} (jdbc/query {:connection conn} ["show tables"])]
+      (for [{:keys [database tablename], table-namespace :namespace} (jdbc/query {:connection conn} [(str "show tables in" database)])]
         {:name   tablename
          :schema (or (not-empty database)
                      (not-empty table-namespace))})))})
