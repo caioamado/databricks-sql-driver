@@ -1,4 +1,4 @@
-(ns metabase.driver.databricks-sql
+(ns metabase.driver.databricks-sql-test
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
             [medley.core :as m]
@@ -13,9 +13,9 @@
             [metabase.query-processor.util :as qp.util])
   (:import [java.sql Connection ResultSet]))
 
-(driver/register! :databricks-sql, :parent :sql-jdbc)
+(driver/register! :databricks-sql-test, :parent :sql-jdbc)
 
-(defmethod sql-jdbc.conn/connection-details->spec :databricks-sql
+(defmethod sql-jdbc.conn/connection-details->spec :databricks-sql-test
   [_ {:keys [host http-path token]}]
   {:classname        "com.databricks.client.jdbc.Driver"
    :subprotocol      "databricks"
@@ -27,7 +27,7 @@
    :uid              "token"
    :pwd              token})
 
-(defmethod sql-jdbc.conn/data-warehouse-connection-pool-properties :databricks-sql
+(defmethod sql-jdbc.conn/data-warehouse-connection-pool-properties :databricks-sql-test
   [driver database]
   ;; The Hive JDBC driver doesn't support `Connection.isValid()`, so we need to supply a test query for c3p0 to use to
   ;; validate connections upon checkout.
@@ -35,7 +35,7 @@
    ((get-method sql-jdbc.conn/data-warehouse-connection-pool-properties :sql-jdbc) driver database)
    {"preferredTestQuery" "SELECT 1"}))
 
-(defmethod sql-jdbc.sync/database-type->base-type :databricks-sql
+(defmethod sql-jdbc.sync/database-type->base-type :databricks-sql-test
   [_ database-type]
   (condp re-matches (name database-type)
     #"boolean"          :type/Boolean
@@ -60,7 +60,7 @@
     #".*"               :type/*))
 
 ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-(defmethod driver/describe-database :databricks-sql
+(defmethod driver/describe-database :databricks-sql-test
   [_ database]
   {:tables
    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
@@ -81,7 +81,7 @@
     (str/replace s #"-" "_")))
 
 ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-(defmethod driver/describe-table :databricks-sql
+(defmethod driver/describe-table :databricks-sql-test
   [driver database {table-name :name, schema :schema}]
   {:name   table-name
    :schema schema
@@ -97,7 +97,7 @@
               :while (valid-describe-table-row? result)]
           {:name              col-name
            :database-type     data-type
-           :base-type         (sql-jdbc.sync/database-type->base-type :databricks-sql (keyword data-type))
+           :base-type         (sql-jdbc.sync/database-type->base-type :databricks-sql-test (keyword data-type))
            :database-position idx}))))})
 
 (def ^:dynamic *param-splice-style*
@@ -108,10 +108,10 @@
   :friendly)
 
 ;; bound variables are not supported in Spark SQL (maybe not Hive either, haven't checked)
-(defmethod driver/execute-reducible-query :databricks-sql
+(defmethod driver/execute-reducible-query :databricks-sql-test
   [driver {{sql :query, :keys [params], :as inner-query} :native, :as outer-query} context respond]
   (let [inner-query (-> (assoc inner-query
-                               :remark (qp.util/query->remark :databricks-sql outer-query)
+                               :remark (qp.util/query->remark :databricks-sql-test outer-query)
                                :query  (if (seq params)
                                          (binding [*param-splice-style* :paranoid]
                                            (unprepare/unprepare driver (cons sql params)))
@@ -125,7 +125,7 @@
 ;; 2.  SparkSQL doesn't support session timezones (at least our driver doesn't support it)
 ;; 3.  SparkSQL doesn't support making connections read-only
 ;; 4.  SparkSQL doesn't support setting the default result set holdability
-(defmethod sql-jdbc.execute/connection-with-timezone :databricks-sql
+(defmethod sql-jdbc.execute/connection-with-timezone :databricks-sql-test
   [driver database _timezone-id]
   (let [conn (.getConnection (sql-jdbc.execute/datasource-with-diagnostic-info! driver database))]
     (try
@@ -136,7 +136,7 @@
         (throw e)))))
 
 ;; 1.  SparkSQL doesn't support setting holdability type to `CLOSE_CURSORS_AT_COMMIT`
-(defmethod sql-jdbc.execute/prepared-statement :databricks-sql
+(defmethod sql-jdbc.execute/prepared-statement :databricks-sql-test
   [driver ^Connection conn ^String sql params]
   (let [stmt (.prepareStatement conn sql
                                 ResultSet/TYPE_FORWARD_ONLY
@@ -150,7 +150,7 @@
         (throw e)))))
 
 ;; the current HiveConnection doesn't support .createStatement
-(defmethod sql-jdbc.execute/statement-supported? :databricks-sql [_] false)
+(defmethod sql-jdbc.execute/statement-supported? :databricks-sql-test [_] false)
 
 (doseq [feature [:basic-aggregations
                  :binning
@@ -159,11 +159,11 @@
                  :native-parameters
                  :nested-queries
                  :standard-deviation-aggregations]]
-  (defmethod driver/supports? [:databricks-sql feature] [_ _] true))
+  (defmethod driver/supports? [:databricks-sql-test feature] [_ _] true))
 
 ;; only define an implementation for `:foreign-keys` if none exists already. In test extensions we define an alternate
 ;; implementation, and we don't want to stomp over that if it was loaded already
-(when-not (get (methods driver/supports?) [:databricks-sql :foreign-keys])
-  (defmethod driver/supports? [:databricks-sql :foreign-keys] [_ _] true))
+(when-not (get (methods driver/supports?) [:databricks-sql-test :foreign-keys])
+  (defmethod driver/supports? [:databricks-sql-test :foreign-keys] [_ _] true))
 
-(defmethod sql.qp/quote-style :databricks-sql [_] :mysql)
+(defmethod sql.qp/quote-style :databricks-sql-test [_] :mysql)
