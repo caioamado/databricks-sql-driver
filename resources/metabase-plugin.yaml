@@ -17,10 +17,6 @@ driver:
       - name: token
         display-name: Personal Access Token
         required: true 
-      - name: db
-        display-name: Database
-        default: default
-        required: true 
 init:
   - step: load-namespace
     namespace: metabase.driver.databricks-sql-test

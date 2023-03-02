@@ -65,10 +65,10 @@
   {:tables
    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
      (set
-      (for [{:keys [database tablename], table-namespace :namespace} (jdbc/query {:connection conn} [(str "show tables in" database)])]
-        {:name   tablename
-         :schema (or (not-empty database)
-                     (not-empty table-namespace))})))})
+      (for [{:keys [databasename]} (jdbc/query {:connection conn} ["show schemas"])
+            {:keys [tablename]} (jdbc/query {:connection conn} [(str "show tables in " databasename)])]
+            {:name tablename
+              :schema databasename})))})
 
 ;; Hive describe table result has commented rows to distinguish partitions
 (defn- valid-describe-table-row? [{:keys [col_name data_type]}]
