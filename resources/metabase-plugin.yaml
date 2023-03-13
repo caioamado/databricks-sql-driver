@@ -5,8 +5,8 @@ info:
 dependencies:
   - plugin: Metabase Spark SQL Driver
 driver:
-  - name: databricks-sql-test
-    display-name: Databricks SQL Test
+  - name: databricks-sql
+    display-name: Databricks SQL
     lazy-load: true
     parent: sql-jdbc
     connection-properties:
@@ -19,6 +19,6 @@ driver:
         required: true 
 init:
   - step: load-namespace
-    namespace: metabase.driver.databricks-sql-test
+    namespace: metabase.driver.databricks-sql
   - step: register-jdbc-driver
     class: com.databricks.client.jdbc.Driver
