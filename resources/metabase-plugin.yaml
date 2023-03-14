@@ -1,5 +1,5 @@
 info:
-  name: Teste Databricks SQL Driver
+  name: Metabase Databricks SQL Driver
   version: 1.0.0-SNAPSHOT-0.0.1
   description: Allows Metabase to connect to Databricks SQL werehouse
 dependencies:
